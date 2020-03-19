@@ -1,11 +1,10 @@
 import numpy as np
 import turtle as t
 from curling_env import curling_env
-import tensorflow as tf
-from tensorflow import keras
-from tensorflow.keras import optimizers,layers,losses
-from DDQN_tf import DDQN,train,plot_curse
-
+import torch
+from torch import nn,optim
+from ActorCritic_py import ActorCritic,train,plot_curse,save_param,load_param
+import os
 
 
 t.setup(1000,1000)
@@ -15,7 +14,7 @@ t.pencolor('purple')
 map_scale = 4
 
 # Hyperparameter
-learning_rate = 0.008
+learning_rate = 0.03
 memory_len = 30000
 gamma = 0.9
 batch_size = 100
@@ -25,46 +24,45 @@ state_size = 8
 
 epoch_num = 200
 max_steps = 300
-update_target_interval = 25
-
+update_target_interval = 10
+path = 'E:\Code\param\AC_params.pkl'
 
 # 初始化
-Q_value = DDQN(output_size=output_size,memory_len = memory_len)
-Q_target =  DDQN(output_size=output_size,memory_len = memory_len)
-Q_value.build(input_shape=(1,state_size))
-Q_target.build(input_shape=(1,state_size))
-
-optimizer = optimizers.Adam(lr = learning_rate)
+AC = ActorCritic(input_size=state_size,output_size=output_size)
+optimizer = optim.Adam(AC.parameters(),lr = learning_rate)
+# optimizer_v = optim.Adam(AC.critic.parameters(),lr = learning_rate)
 score_list = []
 loss_list = []
+
+if os.path.exists(path):
+    load_param(AC,path)
+    #print(AC)
+
+
 
 def main():
     env = curling_env()
     score_avg = 0.0
-    for epo_i in range(100):
+    for epo_i in range(epoch_num):
         score = 0.0
-        epsilon = max(0.01,0.2 - 0.01*(epo_i)/200)
         s = env.reset()
         for i in range(max_steps):
-            action = Q_value.sample_action(s,epsilon)
+            action,prob = AC.sample_action(s)
             s_next,reward,done_flag = env.step(action)
-            Q_value.save_memory((s,action,reward/144,s_next,done_flag))
-            # print(reward/144)
+            AC.save_memory((prob,reward/144,s,s_next))
             score += reward/144
             s = s_next
             if done_flag == 0:
                 break
+        train(AC,optimizer,gamma,loss_list)
         score_list.append(score)
         score_avg += score
-        if len(Q_value.memory_list) >= 2000:
-            train(Q_value,Q_target,optimizer,batch_size,gamma,loss_list)
-        if (epo_i+1) % update_target_interval == 0 and epo_i > 0:
-            for raw,target in zip(Q_value.variables,Q_target.variables):
-                target.assign(raw)
-            print("%d epochs score: %d \n"%(epo_i+1,score_avg/update_target_interval))
+        if (epo_i+1) % update_target_interval == 0:
+            print("%d epoch: avg score: %f"%(epo_i+1,score_avg/update_target_interval))
             score_avg = 0.0
     plot_curse(score_list,loss_list)
-    env.close()
+    save_param(AC,path)
+    # env.close()
     t.mainloop()
 
 

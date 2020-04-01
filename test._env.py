@@ -1,31 +1,28 @@
 import numpy as np
 import turtle as t
-from curling_env import curling_env
 import torch
 from torch import nn,optim
 from ActorCritic_py import ActorCritic,train,plot_curse,save_param,load_param
 import os
+import gym
 
 
-t.setup(1000,1000)
-t.pensize(5)
-t.speed(10)
-t.pencolor('purple')
+
 map_scale = 4
 
 # Hyperparameter
-learning_rate = 0.03
+learning_rate = 0.00018
 memory_len = 30000
-gamma = 0.9
+gamma = 0.98
 batch_size = 100
-output_size = 4
-state_size = 8
+output_size = 2
+state_size = 4
 
 
-epoch_num = 200
-max_steps = 300
-update_target_interval = 1
-path = 'E:\Code\param\AC_params.pkl'
+epoch_num = 1000
+max_steps = 400
+update_target_interval = 10
+path = 'E:\Code\param\AC_params_test.pkl'
 
 # 初始化
 AC = ActorCritic(input_size=state_size,output_size=output_size)
@@ -41,18 +38,20 @@ if os.path.exists(path):
 
 
 def main():
-    env = curling_env()
+    env = gym.make("CartPole-v1")
     score_avg = 0.0
     for epo_i in range(epoch_num):
         score = 0.0
         s = env.reset()
+        epsilon = 0.01 - 0.001*epo_i/100
         for i in range(max_steps):
-            action,prob = AC.sample_action(s)
-            s_next,reward,done_flag = env.step(action)
-            AC.save_memory((prob,reward/144,s,s_next))
-            score += reward/144
+            env.render()
+            action,prob = AC.sample_action(s,epsilon)
+            s_next,reward,done_flag,info = env.step(action)
+            AC.save_memory((prob,reward,s,s_next))
+            score += reward
             s = s_next
-            if done_flag == 0:
+            if done_flag == 1:
                 break
         train(AC,optimizer,gamma,loss_list)
         score_list.append(score)
@@ -62,8 +61,7 @@ def main():
             score_avg = 0.0
     plot_curse(score_list,loss_list)
     save_param(AC,path)
-    # env.close()
-    t.mainloop()
+    env.close()
 
 
 if __name__ == "__main__":

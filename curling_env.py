@@ -89,6 +89,7 @@ class curling_env():
         self.target.dot(30,"blue")
         self.target.hideturtle()
         
+        self.state = [self.x,self.y,self.a_x,self.a_y,self.v_x,self.v_y,self.target_x,self.target_y]
         obversation = self.state
         return obversation
 
@@ -96,6 +97,7 @@ class curling_env():
     def step(self,a_choice):
         action = self.a_dict[a_choice]
         self.update_state(action)
+        self.state = [self.x,self.y,self.a_x,self.a_y,self.v_x,self.v_y,self.target_x,self.target_y]
         s_next = self.state
         reward = -self.Reward()
         if (self.x,self.y) == (self.target_x,self.target_y):
@@ -139,11 +141,14 @@ class curling_env():
 def main():
     env = curling_env()
     for epo_i in range(100):
+        reward_sum = 0.0
         env.reset()
         for i in range(300):
             action = np.random.randint(4)
             # print(action)
             s_next,reward,done = env.step(action)
+            reward_sum += reward
+            print(i,reward,reward_sum)
             if done == 0:
                 break
     t.mainloop()

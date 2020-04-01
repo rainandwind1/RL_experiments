@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 class ActorCritic(nn.Module):
     def __init__(self,input_size,output_size):
         super(ActorCritic,self).__init__()
+        self.state_size = input_size
+        self.action_size = output_size
         self.actor = nn.Sequential(
             nn.Linear(input_size,128),
             nn.ReLU(),
@@ -32,12 +34,17 @@ class ActorCritic(nn.Module):
     def save_memory(self,transition):
         self.memory.append(transition)
 
-    def sample_action(self,inputs):
+    def sample_action(self,inputs,epsilon):
         inputs = torch.tensor(inputs,dtype=torch.float32)
         inputs = inputs.unsqueeze(0)
         p = nn.Softmax(dim=1)
         prob = p(self.actor(inputs))
-        return int(torch.argmax(prob)),torch.max(prob)
+        rand_num = np.random.rand()
+        if rand_num > epsilon:
+            return int(torch.argmax(prob)),torch.max(prob)
+        else:
+            action_choice = np.random.choice(self.action_size)
+            return action_choice, prob[0][action_choice]
 
 
 def train(net,optimizer,gamma,loss_list):

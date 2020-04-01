@@ -1,14 +1,15 @@
 import numpy as np
 import turtle as t
 from curling_env import curling_env
+from Inverted_Pole_env import Inverted_Pole
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import optimizers,layers,losses
 from DDQN_tf import DDQN,train,plot_curse
 import os
 
-LOAD_KEY = True
-path = 'E:\Code\param\culing_ddqn.ckpt'
+LOAD_KEY = False
+path = 'E:\Code\param\inverted_pole_ddqn.ckpt'
 
 t.setup(1000,1000)
 t.pensize(5)
@@ -17,16 +18,16 @@ t.pencolor('purple')
 map_scale = 4
 
 # Hyperparameter
-learning_rate = 0.001
-memory_len = 10000
-gamma = 0.9
+learning_rate = 0.0003
+memory_len = 20000
+gamma = 0.98
 batch_size = 64
-output_size = 4
-state_size = 8
+output_size = 3
+state_size = 2
 
 
-epoch_num = 500
-max_steps = 300
+epoch_num = 600
+max_steps = 500
 update_target_interval = 25
 
 
@@ -46,11 +47,11 @@ score_list = []
 loss_list = []
 
 def main():
-    env = curling_env()
+    env = Inverted_Pole()
     score_avg = 0.0
     for epo_i in range(epoch_num):
         score = 0.0
-        epsilon = max(0.01,0.1 - 0.01*(epo_i)/200)
+        epsilon = max(0.01,0.30 - 0.01*(epo_i)/200)
         s = env.reset()
         for i in range(max_steps):
             action = Q_value.sample_action(s,epsilon)
@@ -65,7 +66,7 @@ def main():
         score_list.append(score)
         print(epo_i,score)
         score_avg += score
-        if len(Q_value.memory_list) >= 2000:
+        if len(Q_value.memory_list) >= 1500:
             train(Q_value,Q_target,optimizer,batch_size,gamma,loss_list)
         if (epo_i+1) % update_target_interval == 0 and epo_i > 0:
             for raw,target in zip(Q_value.variables,Q_target.variables):
